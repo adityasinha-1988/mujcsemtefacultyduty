@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MUJ CSE Duty Portal</title>
-    <!-- Tailwind CSS for styling -->
+    <!-- Tailwind CSS styling ke liye -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PapaParse for reading CSV -->
+    <!-- PapaParse CSV read aur write karne ke liye -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen p-4 md:p-8">
@@ -20,22 +20,26 @@
 
         <div class="p-6 md:p-8">
             
-            <!-- LOADING SECTION (While fetching CSV) -->
+            <!-- LOADING SECTION (Jab CSV fetch ho rahi ho) -->
             <div id="loading-section" class="text-center py-10">
                 <div class="animate-spin inline-block w-12 h-12 border-[4px] border-current border-t-transparent text-blue-600 rounded-full" role="status" aria-label="loading"></div>
-                <h3 class="mt-4 text-xl font-semibold text-slate-700">Loading Data...</h3>
-                <p class="mt-2 text-slate-500 text-sm">Fetching 'cseduty.csv' from GitHub.</p>
+                <h3 class="mt-4 text-xl font-semibold text-slate-700">Data Load Ho Raha Hai...</h3>
+                <p class="mt-2 text-slate-500 text-sm">GitHub se 'cseduty.csv' fetch kiya ja raha hai.</p>
                 <div id="error-message" class="hidden mt-6 text-red-600 font-bold bg-red-100 p-4 rounded inline-block max-w-2xl text-left"></div>
             </div>
 
             <!-- MAIN APPLICATION SECTION -->
             <div id="main-section" class="hidden">
                 <!-- Top Bar -->
-                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b pb-4">
                     <p class="text-sm text-green-600 font-semibold" id="data-status">✅ Data loaded</p>
-                    <div class="flex gap-2">
-                        <button id="btnSearchTab" class="bg-blue-600 text-white px-4 py-2 rounded shadow transition">Search by Faculty</button>
-                        <button id="btnDateTab" class="bg-slate-200 text-slate-800 hover:bg-slate-300 px-4 py-2 rounded shadow transition">View by Date</button>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="btnSearchTab" class="bg-blue-600 text-white px-4 py-2 rounded shadow transition">Faculty se Khojein</button>
+                        <button id="btnDateTab" class="bg-slate-200 text-slate-800 hover:bg-slate-300 px-4 py-2 rounded shadow transition">Date se Dekhein</button>
+                        <button onclick="exportUpdatedCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow transition font-bold flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Updated CSV Download Karein
+                        </button>
                     </div>
                 </div>
 
@@ -44,7 +48,7 @@
                     <div class="relative mb-8">
                         <input type="text" id="facultySearch" 
                             class="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" 
-                            placeholder="Type faculty name (e.g., Mahesh, Sunita)...">
+                            placeholder="Faculty ka naam likhein (Jaise: Mahesh, Sunita)...">
                         <svg class="absolute left-4 top-4 h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
@@ -59,9 +63,9 @@
                             <table class="w-full text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden">
                                 <thead class="bg-slate-800 text-white text-sm uppercase tracking-wider">
                                     <tr>
-                                        <th class="p-4">Date</th>
-                                        <th class="p-4">Day</th>
-                                        <th class="p-4">Time</th>
+                                        <th class="p-4">Tarikh (Date)</th>
+                                        <th class="p-4">Din (Day)</th>
+                                        <th class="p-4">Samay (Time)</th>
                                         <th class="p-4 text-center">Status</th>
                                         <th class="p-4 text-center">Action</th>
                                     </tr>
@@ -71,7 +75,7 @@
                         </div>
                     </div>
                     <div id="no-result" class="hidden text-center py-8">
-                        <p class="text-lg text-red-500 font-semibold">No record found. Please check the name.</p>
+                        <p class="text-lg text-red-500 font-semibold">Koi record nahi mila. Naam check karein.</p>
                     </div>
                 </div>
 
@@ -79,15 +83,15 @@
                 <div id="view-date" class="hidden">
                     <div class="flex flex-col md:flex-row gap-4 mb-6">
                         <div class="flex-1">
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Select Date</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Tarikh Chunein (Select Date)</label>
                             <select id="dateSelector" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg">
-                                <option value="">-- Choose a Date --</option>
+                                <option value="">-- Tarikh Chunein --</option>
                             </select>
                         </div>
                         <div class="flex-1">
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Select Time Slot</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Samay Chunein (Select Time Slot)</label>
                             <select id="timeSelector" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg" disabled>
-                                <option value="">-- All Slots --</option>
+                                <option value="">-- Sabhi Slots --</option>
                             </select>
                         </div>
                     </div>
@@ -96,8 +100,8 @@
                         <table class="w-full text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden">
                             <thead class="bg-slate-800 text-white text-sm uppercase tracking-wider">
                                 <tr>
-                                    <th class="p-4">Faculty Name</th>
-                                    <th class="p-4">Time Slot</th>
+                                    <th class="p-4">Faculty Ka Naam</th>
+                                    <th class="p-4">Samay (Time)</th>
                                     <th class="p-4 text-center">Status</th>
                                     <th class="p-4 text-center">Action</th>
                                 </tr>
@@ -106,7 +110,7 @@
                         </table>
                     </div>
                     <div id="no-date-result" class="hidden text-center py-8">
-                        <p class="text-lg text-slate-500">Select a date to view duties.</p>
+                        <p class="text-lg text-slate-500">Duty dekhne ke liye Tarikh (Date) chunein.</p>
                     </div>
                 </div>
 
@@ -114,7 +118,7 @@
         </div>
     </div>
 
-    <!-- Application Logic (Firebase included) -->
+    <!-- Application Logic (Firebase + Local Storage included) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -122,7 +126,9 @@
 
         let db, auth, user, unsubAttendance;
         let dutyData = [];
-        let attendanceData = {}; 
+        
+        // Local storage se attendance uthao (Firebase fail hone par kaam aayega)
+        let attendanceData = JSON.parse(localStorage.getItem('muj_attendance')) || {}; 
         let currentTab = 'search';
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'muj-duty-app';
@@ -131,12 +137,11 @@
 
         const encodeId = (str) => btoa(encodeURIComponent(str)).replace(/[/+=]/g, '_');
 
-        // CSV FETCH LINK - Relative path works when hosted in the GitHub root.
         const CSV_FILE_URL = "cseduty.csv";
 
         async function initFirebase() {
             if (!firebaseConfig) {
-                console.warn("Firebase config missing. Running in local mode.");
+                console.warn("Firebase config missing. Local Storage mode mein chal raha hai.");
                 return;
             }
             
@@ -165,8 +170,11 @@
             const collRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
 
             unsubAttendance = onSnapshot(collRef, (snapshot) => {
-                attendanceData = {};
-                snapshot.forEach(doc => { attendanceData[doc.id] = doc.data(); });
+                snapshot.forEach(doc => { 
+                    attendanceData[doc.id] = doc.data(); 
+                });
+                // Update local storage too
+                localStorage.setItem('muj_attendance', JSON.stringify(attendanceData));
                 renderCurrentView();
             }, (error) => {
                 console.error("Firestore Error:", error);
@@ -174,17 +182,53 @@
         }
 
         window.markStatus = async function(dutyId, status) {
-            if (!user || !db) {
-                alert("Database connection failed. Check configuration.");
-                return;
+            // Hamesha local me save karein taaki error na aaye
+            attendanceData[dutyId] = { status: status, timestamp: Date.now() };
+            localStorage.setItem('muj_attendance', JSON.stringify(attendanceData));
+            
+            // UI ko turant update karein
+            renderCurrentView();
+
+            // Agar database connect hai toh wahan bhi bhejein
+            if (user && db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', dutyId);
+                    await setDoc(docRef, { status: status, timestamp: Date.now(), user: user.uid }, { merge: true });
+                } catch (e) {
+                    console.error("Firebase Update Error:", e);
+                }
             }
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', dutyId);
-                await setDoc(docRef, { status: status, timestamp: Date.now(), user: user.uid }, { merge: true });
-            } catch (e) {
-                console.error("Update Error:", e);
-                alert("Status update failed.");
-            }
+        };
+
+        // CSV export karne ka function (Naya Feature)
+        window.exportUpdatedCSV = function() {
+            let exportData = [];
+            dutyData.forEach(faculty => {
+                faculty.duties.forEach(duty => {
+                    const dutyId = encodeId(`${faculty.name}_${duty.date}_${duty.time}`);
+                    const status = attendanceData[dutyId]?.status || 'Pending';
+                    exportData.push({
+                        "Faculty Name": faculty.name,
+                        "Designation": faculty.designation,
+                        "Date": duty.date,
+                        "Day": duty.day,
+                        "Time Slot": duty.time,
+                        "Attendance Status": status
+                    });
+                });
+            });
+
+            const csv = Papa.unparse(exportData);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", "Updated_Duty_Attendance.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         };
 
         function showError(message) {
@@ -196,13 +240,11 @@
 
         function loadCSVFromServer() {
             try {
-                // Check if script is running in preview environment (blob/data) or local file system
                 if (!window.location.protocol.startsWith('http')) {
-                    showError(`⚠️ <b>Preview Mode Detected</b><br><br>You are currently in preview mode where loading relative CSV files is not allowed.<br><br>Please upload this code along with <b>cseduty.csv</b> to your GitHub repository. It will work perfectly once hosted!`);
+                    showError(`⚠️ <b>Preview Mode Detected</b><br><br>Aap abhi preview mode mein hain jahan relative CSV files load karna allowed nahi hai.<br><br>Kripya is code ko apni GitHub repository mein <b>cseduty.csv</b> ke sath upload karein. Wahan host hone ke baad ye bilkul sahi chalega!`);
                     return;
                 }
 
-                // Add timestamp to bypass browser cache
                 const fetchUrl = CSV_FILE_URL + "?v=" + new Date().getTime();
                 
                 Papa.parse(fetchUrl, {
@@ -212,9 +254,9 @@
                         processCSVData(results.data);
                     },
                     error: function(err) {
-                        showError(`❌ Failed to load CSV!<br><br>
-                            1. Ensure both <b>cseduty.csv</b> and <b>index.html</b> are in the same folder in your GitHub repository.<br>
-                            2. The file name must be exactly <b>cseduty.csv</b> (no spaces).`);
+                        showError(`❌ CSV load fail ho gayi!<br><br>
+                            1. Dhyan rahe ki <b>cseduty.csv</b> aur <b>index.html</b> dono GitHub repository ke same folder mein hain.<br>
+                            2. File ka naam exactly <b>cseduty.csv</b> hona chahiye (bina space ke).`);
                     }
                 });
             } catch (error) {
@@ -231,7 +273,7 @@
             }
 
             if (headerRowIndex === -1) {
-                showError("❌ Invalid CSV Format. Row containing 'Name of Faculty' not found.");
+                showError("❌ CSV Format Galat Hai. 'Name of Faculty' wali row nahi mili.");
                 return;
             }
 
@@ -285,7 +327,7 @@
 
         function populateDateDropdown() {
             const select = document.getElementById('dateSelector');
-            select.innerHTML = '<option value="">-- Choose a Date --</option>';
+            select.innerHTML = '<option value="">-- Tarikh Chunein --</option>';
             const dates = new Set();
             dutyData.forEach(f => f.duties.forEach(d => dates.add(d.date)));
             
@@ -306,7 +348,7 @@
 
         function getStatusBadge(dutyId) {
             const state = attendanceData[dutyId]?.status || 'Pending';
-            if (state === 'Present') return `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">PRESENT</span>`;
+            if (state === 'Present') return `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">UPASTHIT (PRESENT)</span>`;
             if (state === 'Relieved') return `<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">RELIEVED</span>`;
             return `<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded">PENDING</span>`;
         }
@@ -385,7 +427,7 @@
         dateSelector.addEventListener('change', function(e) {
             const selectedDate = e.target.value;
             
-            timeSelector.innerHTML = '<option value="">-- All Slots --</option>';
+            timeSelector.innerHTML = '<option value="">-- Sabhi Slots --</option>';
             if (selectedDate) {
                 timeSelector.disabled = false;
                 const slots = new Set();
