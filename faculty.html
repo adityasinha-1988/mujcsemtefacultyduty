@@ -3,80 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MUJ Faculty Duty Portal</title>
+    <title>MUJ CSE Admin Duty Portal</title>
+    <!-- Tailwind CSS styling ke liye -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse CSV read/write ke liye -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
-<body class="bg-slate-50 font-sans text-slate-800 min-h-screen p-4 md:p-8 flex justify-center items-start">
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen p-4 md:p-6 relative">
 
-    <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden mt-10">
+    <div class="max-w-7xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden">
         <!-- Header -->
-        <div class="bg-indigo-900 text-white p-6 text-center">
-            <h1 class="text-2xl font-bold mb-1">Manipal University Jaipur</h1>
-            <h2 class="text-md text-indigo-200">MTE Feb 2026 - Faculty Duty Check</h2>
+        <div class="bg-indigo-900 text-white p-6 text-center relative">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">Manipal University Jaipur</h1>
+            <h2 class="text-lg md:text-xl text-indigo-200">CSE Dept - MTE Feb 2026 Duty & Dashboard</h2>
         </div>
 
         <div class="p-6 md:p-8">
             
             <!-- LOADING SECTION -->
             <div id="loading-section" class="text-center py-10">
-                <div class="animate-spin inline-block w-10 h-10 border-[4px] border-current border-t-transparent text-indigo-600 rounded-full" role="status"></div>
-                <h3 class="mt-4 text-lg font-semibold text-slate-700">Data Load Ho Raha Hai...</h3>
-                <div id="error-message" class="hidden mt-4 text-red-600 font-bold bg-red-100 p-3 rounded text-sm text-left"></div>
+                <div class="animate-spin inline-block w-12 h-12 border-[4px] border-current border-t-transparent text-indigo-600 rounded-full" role="status"></div>
+                <h3 class="mt-4 text-xl font-semibold text-slate-700">Data Load Ho Raha Hai...</h3>
+                <p class="mt-2 text-slate-500 text-sm">GitHub se 'cseduty.csv' fetch kiya ja raha hai.</p>
+                <div id="error-message" class="hidden mt-6 text-red-600 font-bold bg-red-100 p-4 rounded inline-block max-w-2xl text-left"></div>
             </div>
 
-            <!-- MAIN SECTION -->
+            <!-- MAIN APPLICATION SECTION -->
             <div id="main-section" class="hidden">
-                <div class="mb-6 text-center">
-                    <p class="text-sm text-slate-500 mb-4">Apna naam type karein aur apni duty schedule dekhein.</p>
-                    <div class="relative max-w-lg mx-auto">
-                        <input type="text" id="facultySearch" 
-                            class="w-full pl-12 pr-4 py-3 border-2 border-slate-300 rounded-lg text-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" 
-                            placeholder="Naam likhein (Jaise: Mahesh)...">
-                        <svg class="absolute left-4 top-3.5 h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                <!-- Navigation Tabs & Downloads -->
+                <div class="flex flex-col xl:flex-row justify-between items-center mb-6 gap-4 border-b pb-4">
+                    <div class="flex flex-wrap gap-2 w-full xl:w-auto justify-center">
+                        <button id="btnSearchTab" onclick="switchTab('search')" class="bg-indigo-600 text-white px-5 py-2.5 rounded shadow transition font-semibold">🔍 Faculty se Khojein</button>
+                        <button id="btnDateTab" onclick="switchTab('date')" class="bg-slate-200 text-slate-800 hover:bg-slate-300 px-5 py-2.5 rounded shadow transition font-semibold">📅 Date se Dekhein</button>
+                        <button id="btnDashTab" onclick="switchTab('dashboard')" class="bg-slate-200 text-slate-800 hover:bg-slate-300 px-5 py-2.5 rounded shadow transition font-semibold">📊 Dashboard</button>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="exportDashboardCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded shadow transition font-bold text-sm flex items-center gap-2">
+                            ↓ Dashboard CSV
+                        </button>
+                        <button onclick="exportOverallCSV()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition font-bold text-sm flex items-center gap-2">
+                            ↓ All Duties CSV
+                        </button>
                     </div>
                 </div>
 
-                <!-- RESULTS -->
-                <div id="result-container" class="hidden">
-                    <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-4 rounded-r-lg">
-                        <h3 id="facultyTitle" class="text-xl font-bold text-indigo-900"></h3>
-                        <p id="facultyDesig" class="text-indigo-700 text-sm"></p>
+                <!-- VIEW 1: SEARCH BY FACULTY -->
+                <div id="view-search" class="block">
+                    <div class="relative mb-8 max-w-2xl mx-auto">
+                        <input type="text" id="facultySearch" 
+                            class="w-full pl-12 pr-4 py-4 border-2 border-slate-300 rounded-xl text-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-sm" 
+                            placeholder="Faculty ka naam likhein (Jaise: Mahesh, Sunita)...">
+                        <svg class="absolute left-4 top-4 h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </div>
-                    
-                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+
+                    <div id="result-container" class="hidden">
+                        <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-r-lg">
+                            <h3 id="facultyTitle" class="text-xl font-bold text-indigo-900"></h3>
+                        </div>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table class="w-full text-left border-collapse bg-white">
+                                <thead class="bg-slate-100 text-slate-700 text-sm uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4 border-b">Tarikh & Din</th>
+                                        <th class="p-4 border-b">Samay (Time)</th>
+                                        <th class="p-4 border-b">Actual Assigned To</th>
+                                        <th class="p-4 border-b text-center">Status</th>
+                                        <th class="p-4 border-b text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dutyTableBody" class="divide-y divide-slate-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="no-result" class="hidden text-center py-8">
+                        <p class="text-lg text-red-500 font-semibold">Koi record nahi mila.</p>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: FILTER BY DATE & SLOT -->
+                <div id="view-date" class="hidden">
+                    <div class="flex flex-col md:flex-row gap-4 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <div class="flex-1">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">1. Tarikh (Date)</label>
+                            <select id="dateSelector" class="w-full p-3 border-2 border-slate-300 rounded-lg focus:border-indigo-500 text-md shadow-sm">
+                                <option value="">-- Tarikh Chunein --</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">2. Samay (Time Slot)</label>
+                            <select id="timeSelector" class="w-full p-3 border-2 border-slate-300 rounded-lg focus:border-indigo-500 text-md shadow-sm" disabled>
+                                <option value="">-- Sabhi Slots --</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="exportFilteredCSV()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-lg shadow transition font-bold w-full md:w-auto">
+                                ↓ Download Displayed
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="date-result-container" class="hidden overflow-x-auto border border-slate-200 rounded-lg">
                         <table class="w-full text-left border-collapse bg-white">
-                            <thead class="bg-slate-100 text-slate-700 text-sm uppercase tracking-wider border-b border-slate-200">
+                            <thead class="bg-slate-100 text-slate-700 text-sm uppercase tracking-wider">
                                 <tr>
-                                    <th class="p-3">Tarikh (Date)</th>
-                                    <th class="p-3">Din (Day)</th>
-                                    <th class="p-3">Samay (Time)</th>
-                                    <th class="p-3 text-center">Status</th>
+                                    <th class="p-4 border-b">Faculty (Jo duty de raha hai)</th>
+                                    <th class="p-4 border-b">Samay (Time)</th>
+                                    <th class="p-4 border-b text-center">Status</th>
+                                    <th class="p-4 border-b text-center">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="dutyTableBody" class="divide-y divide-slate-200"></tbody>
+                            <tbody id="dateDutyTableBody" class="divide-y divide-slate-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="no-date-result" class="hidden text-center py-10 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
+                        <p class="text-lg text-slate-500 font-medium">Duty dekhne ke liye Tarikh (Date) chunein.</p>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: DASHBOARD -->
+                <div id="view-dashboard" class="hidden">
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-left border-collapse bg-white">
+                            <thead class="bg-indigo-900 text-white text-sm uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-4">Faculty Name</th>
+                                    <th class="p-4 text-center">Mool Duty<br><span class="text-xs text-indigo-200">(Assigned)</span></th>
+                                    <th class="p-4 text-center text-red-200">Dusre Ko Di<br><span class="text-xs">(Swapped Out)</span></th>
+                                    <th class="p-4 text-center text-green-200">Dusre Se Li<br><span class="text-xs">(Swapped In)</span></th>
+                                    <th class="p-4 text-center font-bold">Kul Duty<br><span class="text-xs">(Net)</span></th>
+                                    <th class="p-4 text-center bg-indigo-800">Poori Ki<br><span class="text-xs">(Delivered)</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardTableBody" class="divide-y divide-slate-200"></tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- NO RESULTS -->
-                <div id="no-result" class="hidden text-center py-6">
-                    <p class="text-md text-red-500 font-semibold">Koi duty record nahi mila. Kripya naam check karein.</p>
-                </div>
             </div>
         </div>
     </div>
 
+    <!-- SWAP MODAL (Hidden by default) -->
+    <div id="swapModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 flex justify-center items-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-11/12 max-w-md">
+            <h3 class="text-xl font-bold text-slate-800 mb-4 border-b pb-2">Duty Exchange (Swap)</h3>
+            <p class="text-sm text-slate-600 mb-4">Mool Faculty: <span id="swapOriginalName" class="font-bold text-indigo-700"></span></p>
+            
+            <label class="block text-sm font-bold text-slate-700 mb-2">Nayi Faculty Chunein:</label>
+            <select id="swapFacultySelect" class="w-full p-3 border-2 border-slate-300 rounded-lg focus:border-indigo-500 text-md mb-6">
+                <!-- Auto populated -->
+            </select>
+            
+            <input type="hidden" id="swapDutyId">
+            
+            <div class="flex justify-end gap-3">
+                <button onclick="closeSwapModal()" class="px-4 py-2 bg-slate-200 text-slate-800 font-semibold rounded hover:bg-slate-300">Cancel</button>
+                <button onclick="confirmSwap()" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded hover:bg-indigo-700">Swap Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         let db, auth, user, unsubAttendance;
-        let dutyData = [];
+        let dutyData = []; // Raw CSV Data
         let attendanceData = JSON.parse(localStorage.getItem('muj_attendance')) || {}; 
+        let currentTab = 'search';
+        let allFacultyNames = []; // Dropdown ke liye
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'muj-duty-app';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -85,6 +185,7 @@
         const encodeId = (str) => btoa(encodeURIComponent(str)).replace(/[/+=]/g, '_');
         const CSV_FILE_URL = "cseduty.csv";
 
+        // Firebase Setup
         async function initFirebase() {
             if (!firebaseConfig) return;
             try {
@@ -92,124 +193,177 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
+                else await signInAnonymously(auth);
 
                 onAuthStateChanged(auth, (u) => {
                     user = u;
                     if (user) listenToAttendance();
                 });
-            } catch (error) {
-                console.error("Firebase Init Error:", error);
-            }
+            } catch (error) { console.error("Firebase Init Error:", error); }
         }
 
-        // Sirf read permission, update allow nahi hai
         function listenToAttendance() {
             if (!user || !db) return;
             const collRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
-
             unsubAttendance = onSnapshot(collRef, (snapshot) => {
                 snapshot.forEach(doc => { attendanceData[doc.id] = doc.data(); });
                 localStorage.setItem('muj_attendance', JSON.stringify(attendanceData));
-                const e = new Event('input');
-                document.getElementById('facultySearch').dispatchEvent(e);
+                renderActiveView(); // Refresh UI without changing dropdowns
             });
         }
 
-        function showError(message) {
-            document.querySelector('.animate-spin').classList.add('hidden');
-            const errorDiv = document.getElementById('error-message');
-            errorDiv.innerHTML = message;
-            errorDiv.classList.remove('hidden');
-        }
+        // Core Functions
+        window.markStatus = async function(dutyId, status) {
+            if(!attendanceData[dutyId]) attendanceData[dutyId] = {};
+            attendanceData[dutyId].status = status;
+            attendanceData[dutyId].timestamp = Date.now();
+            localStorage.setItem('muj_attendance', JSON.stringify(attendanceData));
+            
+            renderActiveView(); // Important: Only re-renders tables, doesn't reset dropdowns!
 
-        function loadCSVFromServer() {
-            if (!window.location.protocol.startsWith('http')) {
-                showError("⚠️ Preview Mode: Data load nahi hoga. GitHub par host karein.");
-                return;
+            if (user && db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', dutyId);
+                    await setDoc(docRef, attendanceData[dutyId], { merge: true });
+                } catch (e) { console.error("Firebase Update Error:", e); }
             }
+        };
 
-            const fetchUrl = CSV_FILE_URL + "?v=" + new Date().getTime();
-            Papa.parse(fetchUrl, {
-                download: true,
-                skipEmptyLines: true,
-                complete: function(results) { processCSVData(results.data); },
-                error: function(err) { showError("❌ 'cseduty.csv' load fail ho gayi."); }
+        // SWAP LOGIC
+        window.openSwapModal = function(dutyId, originalName) {
+            document.getElementById('swapDutyId').value = dutyId;
+            document.getElementById('swapOriginalName').innerText = originalName;
+            
+            const select = document.getElementById('swapFacultySelect');
+            select.innerHTML = '<option value="">-- Mool Faculty Par Wapas Jayein (Reset) --</option>';
+            
+            allFacultyNames.forEach(name => {
+                if(name !== originalName) {
+                    select.innerHTML += `<option value="${name}">${name}</option>`;
+                }
             });
-        }
 
-        function processCSVData(csvData) {
-            let headerRowIndex = -1;
-            for (let i = 0; i < Math.min(10, csvData.length); i++) {
-                if (csvData[i] && csvData[i][1] && csvData[i][1].toLowerCase().includes("name of faculty")) {
-                    headerRowIndex = i; break;
-                }
+            // Set current swap if exists
+            if(attendanceData[dutyId] && attendanceData[dutyId].swappedWith) {
+                select.value = attendanceData[dutyId].swappedWith;
             }
 
-            if (headerRowIndex === -1) {
-                showError("❌ CSV Format Galat Hai.");
-                return;
+            document.getElementById('swapModal').classList.remove('hidden');
+        };
+
+        window.closeSwapModal = function() {
+            document.getElementById('swapModal').classList.add('hidden');
+        };
+
+        window.confirmSwap = async function() {
+            const dutyId = document.getElementById('swapDutyId').value;
+            const newFaculty = document.getElementById('swapFacultySelect').value;
+            
+            if(!attendanceData[dutyId]) attendanceData[dutyId] = {};
+            
+            if(newFaculty === "") {
+                delete attendanceData[dutyId].swappedWith; // Reset swap
+            } else {
+                attendanceData[dutyId].swappedWith = newFaculty;
             }
+            
+            attendanceData[dutyId].timestamp = Date.now();
+            localStorage.setItem('muj_attendance', JSON.stringify(attendanceData));
+            
+            closeSwapModal();
+            renderActiveView();
 
-            const datesRow = csvData[headerRowIndex];
-            const timesRow = csvData[headerRowIndex + 1];
-            let currentDayStr = "";
-            let timeSlots = [];
-
-            for (let i = 3; i < datesRow.length; i++) {
-                if (datesRow[i] && datesRow[i].trim() !== "") currentDayStr = datesRow[i].trim();
-                let timeStr = timesRow[i] ? timesRow[i].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : "";
-                if (currentDayStr && timeStr) {
-                    let datePart = currentDayStr, dayPart = "";
-                    if (currentDayStr.includes("(")) {
-                        let parts = currentDayStr.split("(");
-                        datePart = parts[0].trim();
-                        dayPart = parts[1].replace(")", "").trim();
-                    }
-                    timeSlots.push({ colIndex: i, date: datePart, day: dayPart, time: timeStr });
-                }
+            if (user && db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', dutyId);
+                    await setDoc(docRef, attendanceData[dutyId], { merge: true });
+                } catch (e) { console.error("Firebase Update Error:", e); }
             }
+        };
 
-            let newDutyData = [];
-            for (let i = headerRowIndex + 2; i < csvData.length; i++) {
-                const row = csvData[i];
-                if (!row || row.length < 3 || !row[1] || row[1].trim() === "") continue;
-
-                let faculty = { name: row[1].trim(), designation: row[2] ? row[2].trim() : "Faculty", duties: [] };
-                timeSlots.forEach(slot => {
-                    let cellValue = row[slot.colIndex];
-                    if (cellValue && cellValue.trim().toLowerCase() === "yes") {
-                        faculty.duties.push({ date: slot.date, day: slot.day, time: slot.time });
-                    }
+        // Processed Duties Logic (Returns flat list calculating swaps)
+        function getProcessedDuties() {
+            let processed = [];
+            dutyData.forEach(f => {
+                f.duties.forEach(d => {
+                    const dutyId = encodeId(`${f.name}_${d.date}_${d.time}`);
+                    const att = attendanceData[dutyId] || {};
+                    const currentName = att.swappedWith ? att.swappedWith : f.name;
+                    
+                    processed.push({
+                        originalName: f.name,
+                        currentName: currentName,
+                        date: d.date,
+                        day: d.day,
+                        time: d.time,
+                        dutyId: dutyId,
+                        status: att.status || 'Pending',
+                        isSwapped: !!att.swappedWith
+                    });
                 });
-
-                if (faculty.name.toLowerCase() !== "name of faculty" && faculty.duties.length > 0) {
-                    newDutyData.push(faculty);
-                }
-            }
-
-            dutyData = newDutyData;
-            document.getElementById('loading-section').classList.add('hidden');
-            document.getElementById('main-section').classList.remove('hidden');
+            });
+            return processed;
         }
 
-        function getStatusBadge(dutyId) {
-            const state = attendanceData[dutyId]?.status || 'Pending';
-            if (state === 'Present') return `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">PRESENT</span>`;
-            if (state === 'Relieved') return `<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">RELIEVED</span>`;
+        // UI Tabs & Rendering
+        window.switchTab = function(tabName) {
+            currentTab = tabName;
+            document.getElementById('view-search').classList.add('hidden');
+            document.getElementById('view-date').classList.add('hidden');
+            document.getElementById('view-dashboard').classList.add('hidden');
+            
+            document.getElementById('btnSearchTab').className = "bg-slate-200 text-slate-800 hover:bg-slate-300 px-5 py-2.5 rounded shadow transition font-semibold";
+            document.getElementById('btnDateTab').className = "bg-slate-200 text-slate-800 hover:bg-slate-300 px-5 py-2.5 rounded shadow transition font-semibold";
+            document.getElementById('btnDashTab').className = "bg-slate-200 text-slate-800 hover:bg-slate-300 px-5 py-2.5 rounded shadow transition font-semibold";
+
+            if(tabName === 'search') {
+                document.getElementById('view-search').classList.remove('hidden');
+                document.getElementById('btnSearchTab').className = "bg-indigo-600 text-white px-5 py-2.5 rounded shadow transition font-semibold";
+                renderSearchTable();
+            } else if (tabName === 'date') {
+                document.getElementById('view-date').classList.remove('hidden');
+                document.getElementById('btnDateTab').className = "bg-indigo-600 text-white px-5 py-2.5 rounded shadow transition font-semibold";
+                renderDateTable();
+            } else if (tabName === 'dashboard') {
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                document.getElementById('btnDashTab').className = "bg-indigo-600 text-white px-5 py-2.5 rounded shadow transition font-semibold";
+                renderDashboard();
+            }
+        };
+
+        function renderActiveView() {
+            if (currentTab === 'search') renderSearchTable();
+            else if (currentTab === 'date') renderDateTable();
+            else if (currentTab === 'dashboard') renderDashboard();
+        }
+
+        // HTML Builders
+        function getStatusBadge(status) {
+            if (status === 'Present') return `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">UPASTHIT (PRESENT)</span>`;
+            if (status === 'Relieved') return `<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">RELIEVED</span>`;
+            if (status === 'Absent') return `<span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded">ABSENT</span>`;
             return `<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded">PENDING</span>`;
         }
 
-        document.getElementById('facultySearch').addEventListener('input', function(e) {
-            const query = e.target.value.toLowerCase().trim();
+        function getActionButtons(dutyId, originalName) {
+            return `
+                <div class="flex flex-wrap gap-1 justify-center">
+                    <button onclick="markStatus('${dutyId}', 'Present')" class="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1.5 rounded transition">P</button>
+                    <button onclick="markStatus('${dutyId}', 'Relieved')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1.5 rounded transition">R</button>
+                    <button onclick="markStatus('${dutyId}', 'Absent')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1.5 rounded transition">A</button>
+                    <button onclick="markStatus('${dutyId}', 'Pending')" class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs px-2 py-1.5 rounded transition">Reset</button>
+                    <button onclick="openSwapModal('${dutyId}', '${originalName}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1.5 rounded transition font-bold ml-1">Swap</button>
+                </div>
+            `;
+        }
+
+        // Tab Renderers
+        function renderSearchTable() {
+            const query = document.getElementById('facultySearch').value.toLowerCase().trim();
+            const tableBody = document.getElementById('dutyTableBody');
             const resultContainer = document.getElementById('result-container');
             const noResult = document.getElementById('no-result');
-            const tableBody = document.getElementById('dutyTableBody');
-            
             tableBody.innerHTML = '';
             
             if (query.length < 2) {
@@ -218,32 +372,296 @@
                 return;
             }
 
-            const match = dutyData.find(f => f.name.toLowerCase().includes(query));
+            const allDuties = getProcessedDuties();
+            // Faculty matches either original name or current name
+            const myDuties = allDuties.filter(d => 
+                d.originalName.toLowerCase().includes(query) || 
+                d.currentName.toLowerCase().includes(query)
+            );
 
-            if (match) {
-                document.getElementById('facultyTitle').innerText = match.name;
-                document.getElementById('facultyDesig').innerText = match.designation;
+            if (myDuties.length > 0) {
+                document.getElementById('facultyTitle').innerText = "Search Results";
                 
-                match.duties.forEach((duty, index) => {
-                    const dutyId = encodeId(`${match.name}_${duty.date}_${duty.time}`);
+                myDuties.forEach((d, index) => {
                     const rowClass = index % 2 === 0 ? "bg-white" : "bg-slate-50";
+                    
+                    let nameDisplay = `<span class="font-bold text-slate-800">${d.currentName}</span>`;
+                    if(d.isSwapped) {
+                        if(d.currentName.toLowerCase().includes(query)) {
+                            nameDisplay += `<br><span class="text-xs text-amber-600">(Proxy for: ${d.originalName})</span>`;
+                        } else {
+                            nameDisplay = `<span class="text-slate-400 line-through">${d.originalName}</span><br><span class="text-xs text-red-500 font-bold">Swapped to: ${d.currentName}</span>`;
+                        }
+                    }
+
                     tableBody.innerHTML += `
-                        <tr class="${rowClass}">
-                            <td class="p-3 text-slate-800">${duty.date}</td>
-                            <td class="p-3 text-slate-600">${duty.day}</td>
-                            <td class="p-3 text-slate-800 font-medium">${duty.time}</td>
-                            <td class="p-3 text-center">${getStatusBadge(dutyId)}</td>
+                        <tr class="${rowClass} hover:bg-indigo-50 transition">
+                            <td class="p-4 text-slate-700">${d.date} <span class="text-xs block text-slate-500">${d.day}</span></td>
+                            <td class="p-4 font-semibold text-slate-800">${d.time}</td>
+                            <td class="p-4 leading-tight">${nameDisplay}</td>
+                            <td class="p-4 text-center">${getStatusBadge(d.status)}</td>
+                            <td class="p-4">${getActionButtons(d.dutyId, d.originalName)}</td>
                         </tr>
                     `;
                 });
-                
                 resultContainer.classList.remove('hidden');
                 noResult.classList.add('hidden');
             } else {
                 resultContainer.classList.add('hidden');
                 noResult.classList.remove('hidden');
             }
+        }
+        document.getElementById('facultySearch').addEventListener('input', renderSearchTable);
+
+        // Date View Renderers
+        const dateSelector = document.getElementById('dateSelector');
+        const timeSelector = document.getElementById('timeSelector');
+
+        dateSelector.addEventListener('change', function(e) {
+            const selectedDate = e.target.value;
+            timeSelector.innerHTML = '<option value="">-- Sabhi Slots --</option>';
+            if (selectedDate) {
+                timeSelector.disabled = false;
+                const slots = new Set();
+                getProcessedDuties().forEach(d => { if (d.date === selectedDate) slots.add(d.time); });
+                Array.from(slots).sort().forEach(slot => { timeSelector.innerHTML += `<option value="${slot}">${slot}</option>`; });
+            } else {
+                timeSelector.disabled = true;
+            }
+            renderDateTable();
         });
+
+        timeSelector.addEventListener('change', renderDateTable);
+
+        function renderDateTable() {
+            const selectedDate = dateSelector.value;
+            const selectedTime = timeSelector.value;
+            const tableBody = document.getElementById('dateDutyTableBody');
+            const resultContainer = document.getElementById('date-result-container');
+            const noResult = document.getElementById('no-date-result');
+
+            tableBody.innerHTML = '';
+
+            if (!selectedDate) {
+                resultContainer.classList.add('hidden');
+                noResult.classList.remove('hidden');
+                return;
+            }
+
+            let foundDuties = getProcessedDuties().filter(d => 
+                d.date === selectedDate && (!selectedTime || d.time === selectedTime)
+            );
+
+            foundDuties.sort((a, b) => a.time.localeCompare(b.time));
+
+            if (foundDuties.length > 0) {
+                foundDuties.forEach((d, index) => {
+                    const rowClass = index % 2 === 0 ? "bg-white" : "bg-slate-50";
+                    let nameDisplay = `<span class="font-bold text-slate-800">${d.currentName}</span>`;
+                    if(d.isSwapped) nameDisplay += ` <span class="text-xs text-amber-600 ml-1">(Proxy: ${d.originalName})</span>`;
+
+                    tableBody.innerHTML += `
+                        <tr class="${rowClass} hover:bg-indigo-50 transition">
+                            <td class="p-4">${nameDisplay}</td>
+                            <td class="p-4 text-slate-700">${d.time}</td>
+                            <td class="p-4 text-center">${getStatusBadge(d.status)}</td>
+                            <td class="p-4">${getActionButtons(d.dutyId, d.originalName)}</td>
+                        </tr>
+                    `;
+                });
+                resultContainer.classList.remove('hidden');
+                noResult.classList.add('hidden');
+            } else {
+                resultContainer.classList.add('hidden');
+                noResult.classList.remove('hidden');
+            }
+        }
+
+        // Dashboard Renderer
+        function renderDashboard() {
+            const tableBody = document.getElementById('dashboardTableBody');
+            tableBody.innerHTML = '';
+            
+            let stats = {};
+            allFacultyNames.forEach(name => {
+                stats[name] = { assigned: 0, swappedOut: 0, swappedIn: 0, net: 0, delivered: 0 };
+            });
+
+            const allDuties = getProcessedDuties();
+            
+            allDuties.forEach(d => {
+                if(!stats[d.originalName]) stats[d.originalName] = { assigned:0, swappedOut:0, swappedIn:0, net:0, delivered:0 };
+                if(!stats[d.currentName]) stats[d.currentName] = { assigned:0, swappedOut:0, swappedIn:0, net:0, delivered:0 };
+
+                stats[d.originalName].assigned++;
+                
+                if(d.isSwapped) {
+                    stats[d.originalName].swappedOut++;
+                    stats[d.currentName].swappedIn++;
+                    stats[d.currentName].net++;
+                } else {
+                    stats[d.originalName].net++;
+                }
+
+                if(d.status === 'Present') {
+                    stats[d.currentName].delivered++;
+                }
+            });
+
+            // Sorting by Net Duties descending
+            const sortedNames = Object.keys(stats).sort((a,b) => stats[b].net - stats[a].net);
+
+            sortedNames.forEach((name, i) => {
+                const s = stats[name];
+                if(s.assigned === 0 && s.net === 0) return; // Skip if completely unrelated
+                
+                const rowClass = i % 2 === 0 ? "bg-white" : "bg-slate-50";
+                tableBody.innerHTML += `
+                    <tr class="${rowClass}">
+                        <td class="p-4 font-bold text-slate-800">${name}</td>
+                        <td class="p-4 text-center text-slate-600">${s.assigned}</td>
+                        <td class="p-4 text-center text-red-500 font-medium">${s.swappedOut > 0 ? '-'+s.swappedOut : '0'}</td>
+                        <td class="p-4 text-center text-green-600 font-medium">${s.swappedIn > 0 ? '+'+s.swappedIn : '0'}</td>
+                        <td class="p-4 text-center font-bold text-indigo-700 text-lg">${s.net}</td>
+                        <td class="p-4 text-center font-bold bg-indigo-50 text-indigo-900">${s.delivered}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // CSV EXPORT FUNCTIONS
+        function downloadCSV(dataArray, filename) {
+            if(dataArray.length === 0) { alert("Data nahi hai download karne ke liye."); return; }
+            const csv = Papa.unparse(dataArray);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.exportOverallCSV = function() {
+            const data = getProcessedDuties().map(d => ({
+                "Actual Faculty": d.currentName,
+                "Original Faculty (If Swapped)": d.isSwapped ? d.originalName : "-",
+                "Date": d.date,
+                "Day": d.day,
+                "Time Slot": d.time,
+                "Status": d.status
+            }));
+            downloadCSV(data, "All_Duties_MTE.csv");
+        };
+
+        window.exportFilteredCSV = function() {
+            const date = dateSelector.value;
+            const time = timeSelector.value;
+            if(!date) { alert("Pehle Date select karein!"); return; }
+
+            let duties = getProcessedDuties().filter(d => d.date === date && (!time || d.time === time));
+            const data = duties.map(d => ({
+                "Faculty": d.currentName,
+                "Time Slot": d.time,
+                "Proxy For": d.isSwapped ? d.originalName : "N/A",
+                "Status": d.status
+            }));
+            
+            let name = `Duty_${date}`;
+            if(time) name += `_${time.replace(/[^a-zA-Z0-9]/g, '')}`;
+            downloadCSV(data, `${name}.csv`);
+        };
+
+        window.exportDashboardCSV = function() {
+            let stats = {};
+            allFacultyNames.forEach(name => stats[name] = { assigned:0, swappedOut:0, swappedIn:0, net:0, delivered:0 });
+            getProcessedDuties().forEach(d => {
+                if(!stats[d.originalName]) stats[d.originalName] = { assigned:0, swappedOut:0, swappedIn:0, net:0, delivered:0 };
+                if(!stats[d.currentName]) stats[d.currentName] = { assigned:0, swappedOut:0, swappedIn:0, net:0, delivered:0 };
+                stats[d.originalName].assigned++;
+                if(d.isSwapped) { stats[d.originalName].swappedOut++; stats[d.currentName].swappedIn++; stats[d.currentName].net++; }
+                else { stats[d.originalName].net++; }
+                if(d.status === 'Present') stats[d.currentName].delivered++;
+            });
+
+            const data = Object.keys(stats).filter(k => stats[k].assigned > 0 || stats[k].net > 0).map(name => ({
+                "Faculty Name": name,
+                "Assigned Original": stats[name].assigned,
+                "Swapped Out (-)": stats[name].swappedOut,
+                "Swapped In (+)": stats[name].swappedIn,
+                "Net Duties": stats[name].net,
+                "Delivered (Present)": stats[name].delivered
+            }));
+            downloadCSV(data, "Faculty_Duty_Dashboard.csv");
+        };
+
+        // Initial Load Logic
+        function loadCSVFromServer() {
+            if (!window.location.protocol.startsWith('http')) {
+                document.getElementById('error-message').innerHTML = `⚠️ <b>Preview Mode</b>: Local files restrict load. Host on GitHub to run normally.`;
+                document.getElementById('error-message').classList.remove('hidden');
+                document.querySelector('.animate-spin').classList.add('hidden');
+                return;
+            }
+            Papa.parse(CSV_FILE_URL + "?v=" + new Date().getTime(), {
+                download: true, skipEmptyLines: true,
+                complete: function(results) { processCSVData(results.data); },
+                error: function() {
+                    document.getElementById('error-message').innerHTML = "❌ 'cseduty.csv' load nahi hua. Check GitHub path.";
+                    document.getElementById('error-message').classList.remove('hidden');
+                    document.querySelector('.animate-spin').classList.add('hidden');
+                }
+            });
+        }
+
+        function processCSVData(csvData) {
+            let headerRowIndex = -1;
+            for (let i = 0; i < Math.min(10, csvData.length); i++) {
+                if (csvData[i] && csvData[i][1] && csvData[i][1].toLowerCase().includes("name of faculty")) { headerRowIndex = i; break; }
+            }
+            if (headerRowIndex === -1) return;
+
+            const datesRow = csvData[headerRowIndex];
+            const timesRow = csvData[headerRowIndex + 1];
+            let currentDayStr = "", timeSlots = [];
+
+            for (let i = 3; i < datesRow.length; i++) {
+                if (datesRow[i] && datesRow[i].trim() !== "") currentDayStr = datesRow[i].trim();
+                let timeStr = timesRow[i] ? timesRow[i].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : "";
+                if (currentDayStr && timeStr) {
+                    let parts = currentDayStr.split("(");
+                    timeSlots.push({ colIndex: i, date: parts[0].trim(), day: parts[1] ? parts[1].replace(")", "").trim() : "", time: timeStr });
+                }
+            }
+
+            let newDutyData = [];
+            let facultySet = new Set();
+            for (let i = headerRowIndex + 2; i < csvData.length; i++) {
+                const row = csvData[i];
+                if (!row || row.length < 3 || !row[1] || row[1].trim() === "") continue;
+
+                let name = row[1].trim();
+                facultySet.add(name);
+                let faculty = { name: name, designation: row[2] ? row[2].trim() : "Faculty", duties: [] };
+                
+                timeSlots.forEach(slot => {
+                    if (row[slot.colIndex] && row[slot.colIndex].trim().toLowerCase() === "yes") {
+                        faculty.duties.push({ date: slot.date, day: slot.day, time: slot.time });
+                    }
+                });
+                if (faculty.name.toLowerCase() !== "name of faculty" && faculty.duties.length > 0) newDutyData.push(faculty);
+            }
+
+            dutyData = newDutyData;
+            allFacultyNames = Array.from(facultySet).sort();
+
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('main-section').classList.remove('hidden');
+            
+            const dates = new Set();
+            dutyData.forEach(f => f.duties.forEach(d => dates.add(d.date)));
+            Array.from(dates).sort().forEach(date => { document.getElementById('dateSelector').innerHTML += `<option value="${date}">${date}</option>`; });
+        }
 
         loadCSVFromServer();
         initFirebase();
