@@ -21,18 +21,18 @@
             <!-- LOADING SECTION -->
             <div id="loading-section" class="text-center py-10">
                 <div class="animate-spin inline-block w-10 h-10 border-[4px] border-current border-t-transparent text-indigo-600 rounded-full" role="status"></div>
-                <h3 class="mt-4 text-lg font-semibold text-slate-700">Data Load Ho Raha Hai...</h3>
+                <h3 class="mt-4 text-lg font-semibold text-slate-700">Loading Data...</h3>
                 <div id="error-message" class="hidden mt-4 text-red-600 font-bold bg-red-100 p-3 rounded text-sm text-left"></div>
             </div>
 
             <!-- MAIN SECTION -->
             <div id="main-section" class="hidden">
                 <div class="mb-6 text-center">
-                    <p class="text-sm text-slate-500 mb-4">Apna naam type karein aur apni duty schedule dekhein.</p>
+                    <p class="text-sm text-slate-500 mb-4">Type your name to view your duty schedule.</p>
                     <div class="relative max-w-lg mx-auto">
                         <input type="text" id="facultySearch" 
                             class="w-full pl-12 pr-4 py-3 border-2 border-slate-300 rounded-lg text-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" 
-                            placeholder="Naam likhein (Jaise: Mahesh)...">
+                            placeholder="Enter name (e.g., Mahesh)...">
                         <svg class="absolute left-4 top-3.5 h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
@@ -50,9 +50,9 @@
                         <table class="w-full text-left border-collapse bg-white">
                             <thead class="bg-slate-100 text-slate-700 text-sm uppercase tracking-wider border-b border-slate-200">
                                 <tr>
-                                    <th class="p-3">Tarikh (Date)</th>
-                                    <th class="p-3">Din (Day)</th>
-                                    <th class="p-3">Samay (Time)</th>
+                                    <th class="p-3">Date</th>
+                                    <th class="p-3">Day</th>
+                                    <th class="p-3">Time</th>
                                     <th class="p-3 text-center">Status</th>
                                 </tr>
                             </thead>
@@ -63,7 +63,7 @@
 
                 <!-- NO RESULTS -->
                 <div id="no-result" class="hidden text-center py-6">
-                    <p class="text-md text-red-500 font-semibold">Koi duty record nahi mila. Kripya naam check karein.</p>
+                    <p class="text-md text-red-500 font-semibold">No duty record found. Please check the name.</p>
                 </div>
             </div>
         </div>
@@ -107,7 +107,7 @@
             }
         }
 
-        // Sirf read permission, update allow nahi hai
+        // Read-only permission
         function listenToAttendance() {
             if (!user || !db) return;
             const collRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
@@ -129,7 +129,7 @@
 
         function loadCSVFromServer() {
             if (!window.location.protocol.startsWith('http')) {
-                showError("⚠️ Preview Mode: Data load nahi hoga. GitHub par host karein.");
+                showError("⚠️ Preview Mode: Data will not load. Please host on GitHub.");
                 return;
             }
 
@@ -138,7 +138,7 @@
                 download: true,
                 skipEmptyLines: true,
                 complete: function(results) { processCSVData(results.data); },
-                error: function(err) { showError("❌ 'cseduty.csv' load fail ho gayi."); }
+                error: function(err) { showError("❌ Failed to load 'cseduty.csv'."); }
             });
         }
 
@@ -151,7 +151,7 @@
             }
 
             if (headerRowIndex === -1) {
-                showError("❌ CSV Format Galat Hai.");
+                showError("❌ Invalid CSV Format.");
                 return;
             }
 
