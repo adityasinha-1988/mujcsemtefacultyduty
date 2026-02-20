@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUJ CSE Duty Portal</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse for reading CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-blue-900 text-white p-6 text-center">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">Manipal University Jaipur</h1>
+            <h2 class="text-lg md:text-xl text-blue-200">CSE Dept - MTE Feb 2026 Duty & Attendance Portal</h2>
+        </div>
+
+        <div class="p-6 md:p-8">
+            
+            <!-- LOADING SECTION (While fetching CSV) -->
+            <div id="loading-section" class="text-center py-10">
+                <div class="animate-spin inline-block w-12 h-12 border-[4px] border-current border-t-transparent text-blue-600 rounded-full" role="status" aria-label="loading"></div>
+                <h3 class="mt-4 text-xl font-semibold text-slate-700">Loading Data...</h3>
+                <p class="mt-2 text-slate-500 text-sm">Fetching 'cseduty.csv' from GitHub.</p>
+                <div id="error-message" class="hidden mt-6 text-red-600 font-bold bg-red-100 p-4 rounded inline-block max-w-2xl text-left"></div>
+            </div>
+
+            <!-- MAIN APPLICATION SECTION -->
+            <div id="main-section" class="hidden">
+                <!-- Top Bar -->
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <p class="text-sm text-green-600 font-semibold" id="data-status">✅ Data loaded</p>
+                    <div class="flex gap-2">
+                        <button id="btnSearchTab" class="bg-blue-600 text-white px-4 py-2 rounded shadow transition">Search by Faculty</button>
+                        <button id="btnDateTab" class="bg-slate-200 text-slate-800 hover:bg-slate-300 px-4 py-2 rounded shadow transition">View by Date</button>
+                    </div>
+                </div>
+
+                <!-- VIEW 1: SEARCH BY FACULTY -->
+                <div id="view-search" class="block">
+                    <div class="relative mb-8">
+                        <input type="text" id="facultySearch" 
+                            class="w-full pl-12 pr-4 py-4 border-2 border-slate-200 rounded-lg text-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" 
+                            placeholder="Type faculty name (e.g., Mahesh, Sunita)...">
+                        <svg class="absolute left-4 top-4 h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+
+                    <div id="result-container" class="hidden">
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
+                            <h3 id="facultyTitle" class="text-xl font-bold text-blue-900"></h3>
+                            <p id="facultyDesig" class="text-blue-700 text-sm"></p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden">
+                                <thead class="bg-slate-800 text-white text-sm uppercase tracking-wider">
+                                    <tr>
+                                        <th class="p-4">Date</th>
+                                        <th class="p-4">Day</th>
+                                        <th class="p-4">Time</th>
+                                        <th class="p-4 text-center">Status</th>
+                                        <th class="p-4 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dutyTableBody" class="divide-y divide-slate-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="no-result" class="hidden text-center py-8">
+                        <p class="text-lg text-red-500 font-semibold">No record found. Please check the name.</p>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: FILTER BY DATE -->
+                <div id="view-date" class="hidden">
+                    <div class="flex flex-col md:flex-row gap-4 mb-6">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Select Date</label>
+                            <select id="dateSelector" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg">
+                                <option value="">-- Choose a Date --</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Select Time Slot</label>
+                            <select id="timeSelector" class="w-full p-3 border-2 border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-lg" disabled>
+                                <option value="">-- All Slots --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="date-result-container" class="hidden overflow-x-auto">
+                        <table class="w-full text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden">
+                            <thead class="bg-slate-800 text-white text-sm uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-4">Faculty Name</th>
+                                    <th class="p-4">Time Slot</th>
+                                    <th class="p-4 text-center">Status</th>
+                                    <th class="p-4 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dateDutyTableBody" class="divide-y divide-slate-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="no-date-result" class="hidden text-center py-8">
+                        <p class="text-lg text-slate-500">Select a date to view duties.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic (Firebase included) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let db, auth, user, unsubAttendance;
+        let dutyData = [];
+        let attendanceData = {}; 
+        let currentTab = 'search';
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'muj-duty-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const encodeId = (str) => btoa(encodeURIComponent(str)).replace(/[/+=]/g, '_');
+
+        // CSV FETCH LINK - Relative path works when hosted in the GitHub root.
+        const CSV_FILE_URL = "cseduty.csv";
+
+        async function initFirebase() {
+            if (!firebaseConfig) {
+                console.warn("Firebase config missing. Running in local mode.");
+                return;
+            }
+            
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (u) => {
+                    user = u;
+                    if (user) listenToAttendance();
+                });
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+            }
+        }
+
+        function listenToAttendance() {
+            if (!user || !db) return;
+            const collRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
+
+            unsubAttendance = onSnapshot(collRef, (snapshot) => {
+                attendanceData = {};
+                snapshot.forEach(doc => { attendanceData[doc.id] = doc.data(); });
+                renderCurrentView();
+            }, (error) => {
+                console.error("Firestore Error:", error);
+            });
+        }
+
+        window.markStatus = async function(dutyId, status) {
+            if (!user || !db) {
+                alert("Database connection failed. Check configuration.");
+                return;
+            }
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', dutyId);
+                await setDoc(docRef, { status: status, timestamp: Date.now(), user: user.uid }, { merge: true });
+            } catch (e) {
+                console.error("Update Error:", e);
+                alert("Status update failed.");
+            }
+        };
+
+        function showError(message) {
+            document.querySelector('.animate-spin').classList.add('hidden');
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.innerHTML = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function loadCSVFromServer() {
+            try {
+                // Check if script is running in preview environment (blob/data) or local file system
+                if (!window.location.protocol.startsWith('http')) {
+                    showError(`⚠️ <b>Preview Mode Detected</b><br><br>You are currently in preview mode where loading relative CSV files is not allowed.<br><br>Please upload this code along with <b>cseduty.csv</b> to your GitHub repository. It will work perfectly once hosted!`);
+                    return;
+                }
+
+                // Add timestamp to bypass browser cache
+                const fetchUrl = CSV_FILE_URL + "?v=" + new Date().getTime();
+                
+                Papa.parse(fetchUrl, {
+                    download: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        processCSVData(results.data);
+                    },
+                    error: function(err) {
+                        showError(`❌ Failed to load CSV!<br><br>
+                            1. Ensure both <b>cseduty.csv</b> and <b>index.html</b> are in the same folder in your GitHub repository.<br>
+                            2. The file name must be exactly <b>cseduty.csv</b> (no spaces).`);
+                    }
+                });
+            } catch (error) {
+                showError("❌ Network Error: " + error.message);
+            }
+        }
+
+        function processCSVData(csvData) {
+            let headerRowIndex = -1;
+            for (let i = 0; i < Math.min(10, csvData.length); i++) {
+                if (csvData[i] && csvData[i][1] && csvData[i][1].toLowerCase().includes("name of faculty")) {
+                    headerRowIndex = i; break;
+                }
+            }
+
+            if (headerRowIndex === -1) {
+                showError("❌ Invalid CSV Format. Row containing 'Name of Faculty' not found.");
+                return;
+            }
+
+            const datesRow = csvData[headerRowIndex];
+            const timesRow = csvData[headerRowIndex + 1];
+            let currentDayStr = "";
+            let timeSlots = [];
+
+            for (let i = 3; i < datesRow.length; i++) {
+                if (datesRow[i] && datesRow[i].trim() !== "") currentDayStr = datesRow[i].trim();
+                let timeStr = timesRow[i] ? timesRow[i].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : "";
+                if (currentDayStr && timeStr) {
+                    let datePart = currentDayStr, dayPart = "";
+                    if (currentDayStr.includes("(")) {
+                        let parts = currentDayStr.split("(");
+                        datePart = parts[0].trim();
+                        dayPart = parts[1].replace(")", "").trim();
+                    }
+                    timeSlots.push({ colIndex: i, date: datePart, day: dayPart, time: timeStr });
+                }
+            }
+
+            let newDutyData = [];
+            for (let i = headerRowIndex + 2; i < csvData.length; i++) {
+                const row = csvData[i];
+                if (!row || row.length < 3 || !row[1] || row[1].trim() === "") continue;
+
+                let faculty = { name: row[1].trim(), designation: row[2] ? row[2].trim() : "Faculty", duties: [] };
+                timeSlots.forEach(slot => {
+                    let cellValue = row[slot.colIndex];
+                    if (cellValue && cellValue.trim().toLowerCase() === "yes") {
+                        faculty.duties.push({ date: slot.date, day: slot.day, time: slot.time });
+                    }
+                });
+
+                if (faculty.name.toLowerCase() !== "name of faculty" && faculty.duties.length > 0) {
+                    newDutyData.push(faculty);
+                }
+            }
+
+            dutyData = newDutyData;
+            initAppUI();
+        }
+
+        function initAppUI() {
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('main-section').classList.remove('hidden');
+            document.getElementById('data-status').innerText = `✅ Data Loaded (${dutyData.length} Faculties)`;
+            populateDateDropdown();
+        }
+
+        function populateDateDropdown() {
+            const select = document.getElementById('dateSelector');
+            select.innerHTML = '<option value="">-- Choose a Date --</option>';
+            const dates = new Set();
+            dutyData.forEach(f => f.duties.forEach(d => dates.add(d.date)));
+            
+            Array.from(dates).sort().forEach(date => {
+                select.innerHTML += `<option value="${date}">${date}</option>`;
+            });
+        }
+
+        function renderCurrentView() {
+            if (currentTab === 'search') {
+                const e = new Event('input');
+                document.getElementById('facultySearch').dispatchEvent(e);
+            } else {
+                const e = new Event('change');
+                document.getElementById('dateSelector').dispatchEvent(e);
+            }
+        }
+
+        function getStatusBadge(dutyId) {
+            const state = attendanceData[dutyId]?.status || 'Pending';
+            if (state === 'Present') return `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">PRESENT</span>`;
+            if (state === 'Relieved') return `<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">RELIEVED</span>`;
+            return `<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded">PENDING</span>`;
+        }
+
+        function getActionButtons(dutyId) {
+            return `
+                <div class="flex gap-2 justify-center">
+                    <button onclick="markStatus('${dutyId}', 'Present')" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 rounded transition">Present</button>
+                    <button onclick="markStatus('${dutyId}', 'Relieved')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded transition">Relieve</button>
+                    <button onclick="markStatus('${dutyId}', 'Pending')" class="bg-slate-300 hover:bg-slate-400 text-slate-800 text-xs px-3 py-1 rounded transition">Reset</button>
+                </div>
+            `;
+        }
+
+        document.getElementById('btnSearchTab').addEventListener('click', () => {
+            currentTab = 'search';
+            document.getElementById('view-search').classList.remove('hidden');
+            document.getElementById('view-date').classList.add('hidden');
+            document.getElementById('btnSearchTab').className = "bg-blue-600 text-white px-4 py-2 rounded shadow transition";
+            document.getElementById('btnDateTab').className = "bg-slate-200 text-slate-800 hover:bg-slate-300 px-4 py-2 rounded shadow transition";
+        });
+
+        document.getElementById('btnDateTab').addEventListener('click', () => {
+            currentTab = 'date';
+            document.getElementById('view-date').classList.remove('hidden');
+            document.getElementById('view-search').classList.add('hidden');
+            document.getElementById('btnDateTab').className = "bg-blue-600 text-white px-4 py-2 rounded shadow transition";
+            document.getElementById('btnSearchTab').className = "bg-slate-200 text-slate-800 hover:bg-slate-300 px-4 py-2 rounded shadow transition";
+        });
+
+        document.getElementById('facultySearch').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const resultContainer = document.getElementById('result-container');
+            const noResult = document.getElementById('no-result');
+            const tableBody = document.getElementById('dutyTableBody');
+            
+            tableBody.innerHTML = '';
+            
+            if (query.length < 2) {
+                resultContainer.classList.add('hidden');
+                noResult.classList.add('hidden');
+                return;
+            }
+
+            const match = dutyData.find(f => f.name.toLowerCase().includes(query));
+
+            if (match) {
+                document.getElementById('facultyTitle').innerText = match.name;
+                document.getElementById('facultyDesig').innerText = match.designation;
+                
+                match.duties.forEach((duty, index) => {
+                    const dutyId = encodeId(`${match.name}_${duty.date}_${duty.time}`);
+                    const rowClass = index % 2 === 0 ? "bg-white" : "bg-slate-50";
+                    tableBody.innerHTML += `
+                        <tr class="${rowClass} hover:bg-blue-50 transition">
+                            <td class="p-4 font-medium text-slate-800">${duty.date}</td>
+                            <td class="p-4 text-slate-600">${duty.day}</td>
+                            <td class="p-4 text-slate-700 font-semibold">${duty.time}</td>
+                            <td class="p-4 text-center">${getStatusBadge(dutyId)}</td>
+                            <td class="p-4">${getActionButtons(dutyId)}</td>
+                        </tr>
+                    `;
+                });
+                
+                resultContainer.classList.remove('hidden');
+                noResult.classList.add('hidden');
+            } else {
+                resultContainer.classList.add('hidden');
+                noResult.classList.remove('hidden');
+            }
+        });
+
+        const dateSelector = document.getElementById('dateSelector');
+        const timeSelector = document.getElementById('timeSelector');
+
+        dateSelector.addEventListener('change', function(e) {
+            const selectedDate = e.target.value;
+            
+            timeSelector.innerHTML = '<option value="">-- All Slots --</option>';
+            if (selectedDate) {
+                timeSelector.disabled = false;
+                const slots = new Set();
+                dutyData.forEach(f => f.duties.forEach(d => {
+                    if (d.date === selectedDate) slots.add(d.time);
+                }));
+                Array.from(slots).sort().forEach(slot => {
+                    timeSelector.innerHTML += `<option value="${slot}">${slot}</option>`;
+                });
+            } else {
+                timeSelector.disabled = true;
+            }
+            
+            renderDateTable();
+        });
+
+        timeSelector.addEventListener('change', renderDateTable);
+
+        function renderDateTable() {
+            const selectedDate = dateSelector.value;
+            const selectedTime = timeSelector.value;
+            const tableBody = document.getElementById('dateDutyTableBody');
+            const resultContainer = document.getElementById('date-result-container');
+            const noResult = document.getElementById('no-date-result');
+
+            tableBody.innerHTML = '';
+
+            if (!selectedDate) {
+                resultContainer.classList.add('hidden');
+                noResult.classList.remove('hidden');
+                return;
+            }
+
+            let foundDuties = [];
+            dutyData.forEach(faculty => {
+                faculty.duties.forEach(duty => {
+                    if (duty.date === selectedDate) {
+                        if (!selectedTime || duty.time === selectedTime) {
+                            foundDuties.push({
+                                facultyName: faculty.name,
+                                time: duty.time,
+                                dutyId: encodeId(`${faculty.name}_${duty.date}_${duty.time}`)
+                            });
+                        }
+                    }
+                });
+            });
+
+            foundDuties.sort((a, b) => a.time.localeCompare(b.time));
+
+            if (foundDuties.length > 0) {
+                foundDuties.forEach((item, index) => {
+                    const rowClass = index % 2 === 0 ? "bg-white" : "bg-slate-50";
+                    tableBody.innerHTML += `
+                        <tr class="${rowClass} hover:bg-blue-50 transition">
+                            <td class="p-4 font-bold text-slate-800">${item.facultyName}</td>
+                            <td class="p-4 text-slate-700">${item.time}</td>
+                            <td class="p-4 text-center">${getStatusBadge(item.dutyId)}</td>
+                            <td class="p-4">${getActionButtons(item.dutyId)}</td>
+                        </tr>
+                    `;
+                });
+                resultContainer.classList.remove('hidden');
+                noResult.classList.add('hidden');
+            } else {
+                resultContainer.classList.add('hidden');
+                noResult.classList.remove('hidden');
+            }
+        }
+
+        // Execution Start
+        loadCSVFromServer();
+        initFirebase();
+    </script>
+</body>
+</html>
