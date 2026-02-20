@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUJ Faculty Duty Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen p-4 md:p-8 flex justify-center items-start">
+
+    <div class="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden mt-10">
+        <!-- Header -->
+        <div class="bg-indigo-900 text-white p-6 text-center">
+            <h1 class="text-2xl font-bold mb-1">Manipal University Jaipur</h1>
+            <h2 class="text-md text-indigo-200">MTE Feb 2026 - Faculty Duty Check</h2>
+        </div>
+
+        <div class="p-6 md:p-8">
+            
+            <!-- LOADING SECTION -->
+            <div id="loading-section" class="text-center py-10">
+                <div class="animate-spin inline-block w-10 h-10 border-[4px] border-current border-t-transparent text-indigo-600 rounded-full" role="status"></div>
+                <h3 class="mt-4 text-lg font-semibold text-slate-700">Data Load Ho Raha Hai...</h3>
+                <div id="error-message" class="hidden mt-4 text-red-600 font-bold bg-red-100 p-3 rounded text-sm text-left"></div>
+            </div>
+
+            <!-- MAIN SECTION -->
+            <div id="main-section" class="hidden">
+                <div class="mb-6 text-center">
+                    <p class="text-sm text-slate-500 mb-4">Apna naam type karein aur apni duty schedule dekhein.</p>
+                    <div class="relative max-w-lg mx-auto">
+                        <input type="text" id="facultySearch" 
+                            class="w-full pl-12 pr-4 py-3 border-2 border-slate-300 rounded-lg text-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition" 
+                            placeholder="Naam likhein (Jaise: Mahesh)...">
+                        <svg class="absolute left-4 top-3.5 h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- RESULTS -->
+                <div id="result-container" class="hidden">
+                    <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-4 rounded-r-lg">
+                        <h3 id="facultyTitle" class="text-xl font-bold text-indigo-900"></h3>
+                        <p id="facultyDesig" class="text-indigo-700 text-sm"></p>
+                    </div>
+                    
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-left border-collapse bg-white">
+                            <thead class="bg-slate-100 text-slate-700 text-sm uppercase tracking-wider border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">Tarikh (Date)</th>
+                                    <th class="p-3">Din (Day)</th>
+                                    <th class="p-3">Samay (Time)</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dutyTableBody" class="divide-y divide-slate-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- NO RESULTS -->
+                <div id="no-result" class="hidden text-center py-6">
+                    <p class="text-md text-red-500 font-semibold">Koi duty record nahi mila. Kripya naam check karein.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        let db, auth, user, unsubAttendance;
+        let dutyData = [];
+        let attendanceData = JSON.parse(localStorage.getItem('muj_attendance')) || {}; 
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'muj-duty-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const encodeId = (str) => btoa(encodeURIComponent(str)).replace(/[/+=]/g, '_');
+        const CSV_FILE_URL = "cseduty.csv";
+
+        async function initFirebase() {
+            if (!firebaseConfig) return;
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (u) => {
+                    user = u;
+                    if (user) listenToAttendance();
+                });
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+            }
+        }
+
+        // Sirf read permission, update allow nahi hai
+        function listenToAttendance() {
+            if (!user || !db) return;
+            const collRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
+
+            unsubAttendance = onSnapshot(collRef, (snapshot) => {
+                snapshot.forEach(doc => { attendanceData[doc.id] = doc.data(); });
+                localStorage.setItem('muj_attendance', JSON.stringify(attendanceData));
+                const e = new Event('input');
+                document.getElementById('facultySearch').dispatchEvent(e);
+            });
+        }
+
+        function showError(message) {
+            document.querySelector('.animate-spin').classList.add('hidden');
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.innerHTML = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function loadCSVFromServer() {
+            if (!window.location.protocol.startsWith('http')) {
+                showError("⚠️ Preview Mode: Data load nahi hoga. GitHub par host karein.");
+                return;
+            }
+
+            const fetchUrl = CSV_FILE_URL + "?v=" + new Date().getTime();
+            Papa.parse(fetchUrl, {
+                download: true,
+                skipEmptyLines: true,
+                complete: function(results) { processCSVData(results.data); },
+                error: function(err) { showError("❌ 'cseduty.csv' load fail ho gayi."); }
+            });
+        }
+
+        function processCSVData(csvData) {
+            let headerRowIndex = -1;
+            for (let i = 0; i < Math.min(10, csvData.length); i++) {
+                if (csvData[i] && csvData[i][1] && csvData[i][1].toLowerCase().includes("name of faculty")) {
+                    headerRowIndex = i; break;
+                }
+            }
+
+            if (headerRowIndex === -1) {
+                showError("❌ CSV Format Galat Hai.");
+                return;
+            }
+
+            const datesRow = csvData[headerRowIndex];
+            const timesRow = csvData[headerRowIndex + 1];
+            let currentDayStr = "";
+            let timeSlots = [];
+
+            for (let i = 3; i < datesRow.length; i++) {
+                if (datesRow[i] && datesRow[i].trim() !== "") currentDayStr = datesRow[i].trim();
+                let timeStr = timesRow[i] ? timesRow[i].replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() : "";
+                if (currentDayStr && timeStr) {
+                    let datePart = currentDayStr, dayPart = "";
+                    if (currentDayStr.includes("(")) {
+                        let parts = currentDayStr.split("(");
+                        datePart = parts[0].trim();
+                        dayPart = parts[1].replace(")", "").trim();
+                    }
+                    timeSlots.push({ colIndex: i, date: datePart, day: dayPart, time: timeStr });
+                }
+            }
+
+            let newDutyData = [];
+            for (let i = headerRowIndex + 2; i < csvData.length; i++) {
+                const row = csvData[i];
+                if (!row || row.length < 3 || !row[1] || row[1].trim() === "") continue;
+
+                let faculty = { name: row[1].trim(), designation: row[2] ? row[2].trim() : "Faculty", duties: [] };
+                timeSlots.forEach(slot => {
+                    let cellValue = row[slot.colIndex];
+                    if (cellValue && cellValue.trim().toLowerCase() === "yes") {
+                        faculty.duties.push({ date: slot.date, day: slot.day, time: slot.time });
+                    }
+                });
+
+                if (faculty.name.toLowerCase() !== "name of faculty" && faculty.duties.length > 0) {
+                    newDutyData.push(faculty);
+                }
+            }
+
+            dutyData = newDutyData;
+            document.getElementById('loading-section').classList.add('hidden');
+            document.getElementById('main-section').classList.remove('hidden');
+        }
+
+        function getStatusBadge(dutyId) {
+            const state = attendanceData[dutyId]?.status || 'Pending';
+            if (state === 'Present') return `<span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-bold rounded">PRESENT</span>`;
+            if (state === 'Relieved') return `<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded">RELIEVED</span>`;
+            return `<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded">PENDING</span>`;
+        }
+
+        document.getElementById('facultySearch').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const resultContainer = document.getElementById('result-container');
+            const noResult = document.getElementById('no-result');
+            const tableBody = document.getElementById('dutyTableBody');
+            
+            tableBody.innerHTML = '';
+            
+            if (query.length < 2) {
+                resultContainer.classList.add('hidden');
+                noResult.classList.add('hidden');
+                return;
+            }
+
+            const match = dutyData.find(f => f.name.toLowerCase().includes(query));
+
+            if (match) {
+                document.getElementById('facultyTitle').innerText = match.name;
+                document.getElementById('facultyDesig').innerText = match.designation;
+                
+                match.duties.forEach((duty, index) => {
+                    const dutyId = encodeId(`${match.name}_${duty.date}_${duty.time}`);
+                    const rowClass = index % 2 === 0 ? "bg-white" : "bg-slate-50";
+                    tableBody.innerHTML += `
+                        <tr class="${rowClass}">
+                            <td class="p-3 text-slate-800">${duty.date}</td>
+                            <td class="p-3 text-slate-600">${duty.day}</td>
+                            <td class="p-3 text-slate-800 font-medium">${duty.time}</td>
+                            <td class="p-3 text-center">${getStatusBadge(dutyId)}</td>
+                        </tr>
+                    `;
+                });
+                
+                resultContainer.classList.remove('hidden');
+                noResult.classList.add('hidden');
+            } else {
+                resultContainer.classList.add('hidden');
+                noResult.classList.remove('hidden');
+            }
+        });
+
+        loadCSVFromServer();
+        initFirebase();
+    </script>
+</body>
+</html>
